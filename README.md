@@ -28,3 +28,14 @@ Full documentation is embedded inside the HTML file.
 
 Fork, modify, feed (audio first), grow your own matrix — all locally, no internet required.
 
+microgpt-seed-v0.1.html----------test
+
+v0.11 microGPT 5-Byte Seed — Continuous Rhythm Engine + UI
+
+microGPT v0.12 — 5-Byte Seed + Continuous Rhythm Engine
+
+microGPT v0.13 — 5-Byte Seed + Continuous Rhythm Engine
+
+
+
+
