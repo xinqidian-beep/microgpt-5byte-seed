@@ -60,6 +60,32 @@ microGPT v0.24 —Quantitative Panel Repair Version
 
 microGPT v0.25 —Three-level joint automatic summary version
 
+microGPT v0.26 —Deep Text Injection Starter
+
+microGPT v0.27 —SOC Panel Visual Optimization Version
+
+microGPT v0.28 —SOC Panel Visual Enhancement Version
+
+microGPT v0.281 — SOC Trend Ripple Visualization Optimization Version
+
+microGPT v0.282 — SNN Hardware Comparison Label Optimization Version
+
+microGPT v0.29 —Neuromorphic STDP Hardware Comparison Label Optimized Version
+
+microGPT v0.291 —Optimized version of interval input strategy
+
+microGPT v0.30 —Other Modal Input Strategy Optimization Version
+
+microGPT v0.31 —2D Blue Bar Restoration Version
+
+microGPT v0.311—Biological memory tags + resume from breakpoint version
+
+microGPT v0.32 —Blue bar retention + optimized interval strategy
+
+
+
+
+
 
 
 
