@@ -36,6 +36,30 @@ microGPT v0.12 — 5-Byte Seed + Continuous Rhythm Engine
 
 microGPT v0.13 — 5-Byte Seed + Continuous Rhythm Engine
 
+microGPT v0.14—Audio Rhythm Feeding Version(Continuous input + Raster periodic sparse observation)
+
+microGPT v0.15 — Raster Intuitive Enhanced Version (Highlighting Periodic Blank Bands)
+
+microGPT v0.16 — MaxGap Enhanced Trend Curve
+
+microGPT_v0.17—Compound Rhythm 100,000 Steps Observation Version
+
+microGPT v0.18 —Preliminary demonstration of video bitstream injection
+
+microGPT v0.19—The combined audio and video technology has led to the emergence of a 100,000-step repeated beta version.
+
+microGPT v0.20 — SOC Criticality Quantification Version (Power-Law Distribution + Sandpile Model Comparison)
+
+microGPT v0.21—Text-based joint injection preliminary demonstration
+
+microGPT v0.22 —Three-level joint quantitative observation version
+
+microGPT_v0.23—Optimized version with automatic log display
+
+microGPT v0.24 —Quantitative Panel Repair Version
+
+microGPT v0.25 —Three-level joint automatic summary version
+
 
 
 
