@@ -82,6 +82,36 @@ microGPT v0.311—Biological memory tags + resume from breakpoint version
 
 microGPT v0.32 —Blue bar retention + optimized interval strategy
 
+microGPT v0.33 ---erro
+
+microGPT v0.34 ---First, audio prosodic impulse (A1) + dynamic attractor lattice (B1) + STDP audio enhancement.---erro
+
+microGPT v0.35 ---Fix boot deadlock + Physique enhancements + audio bootstrapping
+
+microGPT v0.36 ---Revert to v0.32 stable design + minimal startup protection + slight Physique enhancements---erro
+
+microGPT_v0.37---v0.32 is a precise replica (without any logical changes, only the title and log annotations are modified), strictly adhering to the principle of simplicity.----erro
+
+microGPT_v0.38---v0.32 Precise replication + Optimized graphical interface (zero new parameters, zero launch seed, zero Physique changes)----erro
+
+microGPT_v0.39---v0.32 is a 100% accurate replica (with zero changes to the logic), with only enhancements to the interface annotations and log diagnostics.----erro
+
+microGPT v0.33 ---Optimized interface version
+
+microGPT v0.33 ---Final delivery code
+
+microGPT_v0.34---Minimal LEGO assembly set (external random single connection)
+
+microGPT_v0.35---Display interface merge
+
+microGPT_v0.36---MaxGap visibility optimization
+
+microGPT_v0.37---Two new buttons,Add the functions runSelfLockAudit and runMinDiffTest.
+
+microGPT_v0.38---Modify the gameLoop push frequency and drawMaxGapCurve settings.
+
+
+
 
 
 
