@@ -30,6 +30,8 @@ Fork, modify, feed (audio first), grow your own matrix — all locally, no inter
 
 microgpt-seed-v0.1.html----------test
 
+202604020000--------------------------------
+
 v0.11 microGPT 5-Byte Seed — Continuous Rhythm Engine + UI
 
 microGPT v0.12 — 5-Byte Seed + Continuous Rhythm Engine
@@ -80,9 +82,13 @@ microGPT v0.31 —2D Blue Bar Restoration Version
 
 microGPT v0.311—Biological memory tags + resume from breakpoint version
 
+------------------------------------------------
+
 microGPT v0.32 —Blue bar retention + optimized interval strategy
 
 microGPT v0.33 ---erro
+
+202604031042-------------------------------------------------
 
 microGPT v0.34 ---First, audio prosodic impulse (A1) + dynamic attractor lattice (B1) + STDP audio enhancement.---erro
 
@@ -95,6 +101,8 @@ microGPT_v0.37---v0.32 is a precise replica (without any logical changes, only t
 microGPT_v0.38---v0.32 Precise replication + Optimized graphical interface (zero new parameters, zero launch seed, zero Physique changes)----erro
 
 microGPT_v0.39---v0.32 is a 100% accurate replica (with zero changes to the logic), with only enhancements to the interface annotations and log diagnostics.----erro
+
+202604031211--------------------------------------
 
 microGPT v0.33 ---Optimized interface version
 
@@ -109,6 +117,43 @@ microGPT_v0.36---MaxGap visibility optimization
 microGPT_v0.37---Two new buttons,Add the functions runSelfLockAudit and runMinDiffTest.
 
 microGPT_v0.38---Modify the gameLoop push frequency and drawMaxGapCurve settings.
+
+202604041420------------------------------
+
+microGPT_v0.39---Audio injection
+
+microGPT_v0.40---Added real WAV file selection interface
+
+microGPT v0.41---Supports common audio formats (WAV/MP3/M4A/OGG, etc.), automatically converting to mono processing (normal audio is prioritized). The observer automatically records timeline snapshots before and after audio input (eff_mem/GreenDensity/mini_K/Rate). The tokenizer is simplified (single 1D sequence). The display layer is strictly isolated, and all recordings are non-blocking.
+
+microGPT v0.42---A new persistent data reporting box has been added (automatically recording eff_mem, GreenDensityΔ, mini_K trend, logical Time growth rate, and raster chart regularity description every 30 minutes).
+
+Report data is stored in a scrollable persistent box (the last 10 records are retained even after page refresh).
+
+The actual time display on the wall is also retained (coexisting with logical Time).
+
+Normal audio is prioritized, and the display layer is completely isolated.
+
+202604051046--------------------------
+
+microGPT_v0.43---Added a new input mode switching panel (normal audio / stereo / video / text).
+
+Supports mixed input (multiple modes can be enabled simultaneously).
+Automatically records and displays the following information each time a file is loaded: filename, size (MB), type, and duration (audio/video).
+The persistent report box now records the input source.
+Optimized loading prompts and error handling.
+Maintains a single HTML file, adhering to the minimalist principle.
+
+microGPT_v0.44---First time kuo
+
+microGPT v0.45-minimal----Pure 5-node channel version
+
+microGPT_v0.45-A-----Flexible channel version
+
+microGPT v0.45-B----Pure 5-node response channel version
+
+
+
 
 
 
