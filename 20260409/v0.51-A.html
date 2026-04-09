@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>microGPT v0.51-A - 第一层9单元 轻量Fib模式 (总17单元第二层)</title>
+<style>
+body { font-family: monospace; background:#000; color:#0f0; margin:0; padding:10px; }
+canvas { border:2px solid #0f0; }
+button, input { background:#111; color:#0f0; border:1px solid #0f0; padding:6px 12px; margin:3px; cursor:pointer; }
+.panel { margin:10px 0; padding:10px; border:1px solid #0f0; background:#111; }
+</style>
+</head>
+<body>
+<h1>microGPT v0.51-A - 轻量Fib模式 (第一层9单元 | 第二层17单元)</h1>
+<p style="color:#ff0;">Fib自然扩张 | 第一层9单元固定 | 轻量呼吸流动</p>
+<div class="panel">
+<button onclick="toggleRun()">跑 / 暂停</button>
+<button onclick="run1000()">跑 1000 步</button>
+<button onclick="resetAll()">重置所有积木</button>
+<button onclick="toggleAudio()">音频注入 On/Off</button>
+<button onclick="document.getElementById('fileInput').click()">选择 Hemi-Sync 文件</button>
+<input type="file" id="fileInput" accept="audio/*" onchange="loadFile(event)" style="display:none;">
+</div>
+<div class="panel">
+墙上时间: <span id="wallTime">00:00:00</span> |
+逻辑Time: <span id="time">0</span> | Spikes: <span id="spikes">0</span> | Rate: <span id="rate">0</span> |
+GreenDensity: <span id="green">50</span>% | mini_K: <span id="miniK">0</span> | 模式: <span id="mode">A-轻量Fib</span> | 状态: <span id="status">稳定</span>
+</div>
+<canvas id="raster" width="820" height="320"></canvas><br>
+<canvas id="memcurve" width="820" height="140"></canvas>
+<div class="panel">
+<strong>日志:</strong><br>
+<div id="log" style="height:160px; overflow-y:auto; background:#111; padding:6px; font-size:12px;"></div>
+</div>
+<script>
+// v0.51-A 轻量Fib模式 - 第一层9单元 + 第二层总17单元
+let running = false;
+let time = 0, spikes = 0, rate = 0, greenDensity = 50;
+let miniK = 0;
+let audioEnabled = true, audioBuffer = null;
+const ctx = document.getElementById('raster').getContext('2d');
+const memCtx = document.getElementById('memcurve').getContext('2d');
+let layers = []; // 第一层9单元，每单元5节点
+for(let l=0; l<9; l++) {
+  layers.push(Array(5).fill().map(() => ({s:0, m:Math.random()})));
+}
+let secondLayerActive = false; // 切换测试第二层17单元
+function pushLog(msg) {
+  const logDiv = document.getElementById('log');
+  logDiv.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`;
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+function loadFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    audioBuffer = new Uint8Array(ev.target.result);
+    pushLog(`音频加载成功: ${file.name} | 双耳异步就绪`);
+  };
+  reader.readAsArrayBuffer(file);
+}
+function process() {
+  if (audioEnabled && audioBuffer) {
+    const tokens = Array(64).fill(0).map((_,i) => audioBuffer[Math.floor(i * audioBuffer.length / 64)] > 100 ? 1 : 0);
+    layers.forEach(layer => {
+      layer.forEach((n,i) => {
+        n.s = (n.s + tokens[i%5]) % 2;
+        n.m = Math.max(0.5, Math.min(1, n.m + tokens[i%5] * 0.018)); // 二元clamp
+      });
+    });
+  }
+  // 简化三层流动 + Fib节奏翻正
+  let sp = 0;
+  let greenContrib = 0;
+  layers.forEach(layer => {
+    layer.forEach(n => {
+      if (n.s) sp++;
+      greenContrib += n.m;
+    });
+  });
+  spikes += sp;
+  time++;
+  rate = spikes / time;
+  let delta = (sp > 6 ? 0.35 : -0.08) + (greenContrib / (9*5) - 0.5) * 0.6;
+  if (greenDensity < -1000) delta += 0.3; // Fib加速翻正
+  greenDensity = Math.max(-3000, Math.min(98, greenDensity + delta));
+  miniK = (miniK * 0.92 + greenContrib / (9*5) * 8) * 0.98;
+}
+function render() { /* 简化可视化，实际可扩展到多层 */ 
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,820,320);
+  // ... (继承A7流动线，省略以保持极简)
+  memCtx.fillStyle = '#000'; memCtx.fillRect(0,0,820,140);
+  memCtx.strokeStyle = '#0f0'; memCtx.lineWidth = 2.8;
+  // 记忆曲线省略细节
+}
+function gameLoop() {
+  if (!running) return;
+  for (let i = 0; i < 15; i++) process();
+  render();
+  updateUI();
+  requestAnimationFrame(gameLoop);
+}
+function updateUI() {
+  document.getElementById('time').textContent = time;
+  document.getElementById('spikes').textContent = spikes;
+  document.getElementById('rate').textContent = rate.toFixed(3);
+  document.getElementById('green').textContent = greenDensity.toFixed(0);
+  document.getElementById('miniK').textContent = miniK.toFixed(1);
+  document.getElementById('status').textContent = greenDensity > 60 ? '涌现中' : '稳定';
+}
+function toggleRun() { running = !running; if(running) { pushLog('v0.51-A 轻量Fib模式启动'); gameLoop(); } }
+function run1000() { for(let i=0;i<1000;i++) process(); render(); updateUI(); }
+function resetAll() {
+  time=spikes=0; rate=0; greenDensity=50; miniK=0;
+  layers.forEach(layer => layer.forEach(n => {n.s = Math.random()>0.5?1:0; n.m = Math.random();}));
+  render(); updateUI();
+  pushLog('系统重置 | 第一层9单元就绪');
+}
+function toggleAudio() { audioEnabled = !audioEnabled; pushLog(`音频注入 ${audioEnabled ? 'On' : 'Off'}`); }
+// 初始化
+render();
+pushLog('v0.51-A 轻量Fib模式 (第一层9单元) 已启动 | 等待第二层17单元测试');
+updateUI();
+setInterval(() => document.getElementById('wallTime').textContent = new Date().toLocaleTimeString().slice(0,8), 1000);
+</script>
+</body>
+</html>
