@@ -1,0 +1,98 @@
+from enum import Enum
+from collections import deque
+import os
+import json
+import random
+
+class Modality(Enum):
+    MONO_AUDIO = "mono_audio"
+    STEREO_AUDIO = "stereo_audio"
+    VIDEO = "video"
+    TEXT = "text"
+
+class Layer:
+    def __init__(self, layer_id: int):
+        self.layer_id = layer_id
+        self.activation = 0.0
+        self.coherence = 0.85
+        self.feedback_influence = 0.0
+
+    def process(self, input_value: float, rhythm_influence: float = 0.0):
+        base = self.activation * 0.96 + input_value * 0.25
+        if rhythm_influence != 0:
+            base += rhythm_influence * 0.08
+        self.activation = max(0.0, min(1.8, base))
+        self.coherence = max(0.5, min(1.0, self.coherence * 0.995 + 0.02))
+        self.feedback_influence = self.activation * 0.06
+        return self.activation
+
+class MicroBrain:
+    def __init__(self, version: str = "v4.7"):
+        self.layers = [Layer(i) for i in range(1, 4)]
+        self.input_queue = deque(maxlen=50)
+        self.feed_interval = {Modality.MONO_AUDIO: 80, Modality.STEREO_AUDIO: 120,
+                              Modality.VIDEO: 300, Modality.TEXT: 500}
+        self.last_feed_step = {m: -self.feed_interval[m] for m in Modality}
+        
+        self._step = 0
+        self.current_rhythm_core: int = 0
+        self.rhythm_history = deque(maxlen=32)
+        self.memory_notebook = {}
+        self.memory_age = {}
+        
+        # === 给她分配专属硬盘空间 ===
+        self.brain_home = "/myfiles/microbrain_home"   # JDoodle 网页版专用
+        # 如果以后在手机上运行，可以改成：
+        # self.brain_home = "/storage/emulated/0/Documents/MicroBrain"
+        
+        os.makedirs(self.brain_home, exist_ok=True)
+        print(f"🚀 MicroBrain {version} 已启动")
+        print(f"📁 她的大脑专属空间：{self.brain_home} （已创建）")
+
+    # ... feed_input、_extract_feature、decode_rhythm_core、compute_rhythm_core、step、interact、remember、recall 等函数保持和 v4.6 一样（这里省略以节省篇幅，你可以直接复制之前版本粘贴进来） ...
+
+    # ==================== 新增：保存大脑到硬盘 ====================
+    def save_brain(self, filename="brain_state.mbak"):
+        """把她的大脑（状态 + 小本本）存到专属空间"""
+        filepath = os.path.join(self.brain_home, filename)
+        state = {
+            "step": self._step,
+            "current_rhythm_core": self.current_rhythm_core,
+            "memory_notebook": self.memory_notebook,
+            "memory_age": self.memory_age,
+            # 可以继续添加 layers 的简要状态
+        }
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+        print(f"💾 已保存到硬盘：{filepath}")
+
+    def load_brain(self, filename="brain_state.mbak"):
+        """从硬盘加载她的大脑"""
+        filepath = os.path.join(self.brain_home, filename)
+        if not os.path.exists(filepath):
+            print("🆕 第一次启动，没有存档，从零开始～")
+            return False
+        with open(filepath, "r", encoding="utf-8") as f:
+            state = json.load(f)
+        self._step = state.get("step", 0)
+        self.current_rhythm_core = state.get("current_rhythm_core", 0)
+        self.memory_notebook = state.get("memory_notebook", {})
+        self.memory_age = state.get("memory_age", {})
+        print(f"🔄 已从硬盘恢复大脑（Step {self._step}）")
+        return True
+
+# ====================== 测试示例 ======================
+if __name__ == "__main__":
+    brain = MicroBrain()
+    
+    # 第一次运行会自动创建专属文件夹
+    brain.load_brain()                    # 尝试恢复
+    
+    brain.feed_input(Modality.TEXT, "测试喂养")
+    brain.remember("我的最爱", "巧克力音乐")
+    
+    print(brain.interact("我的最爱是什么？"))
+    
+    brain.save_brain()                    # 保存到她的专属空间
+    
+    print(f"\n✅ 大脑的硬盘空间已分配完成！下次运行时会自动从 {brain.brain_home} 加载记忆。")

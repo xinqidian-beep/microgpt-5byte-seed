@@ -1,0 +1,176 @@
+from enum import Enum
+from collections import deque
+import math
+
+class Modality(Enum):          
+    MONO_AUDIO = "mono_audio"
+    STEREO_AUDIO = "stereo_audio"
+    VIDEO = "video"
+    TEXT = "text"
+
+class Layer:        
+    def __init__(self,  layer_id):        
+        self.layer_id = layer_id
+        self.activation = 0.0
+        self.coherence = 0.0
+        self.feedback_influence = 0.0  # For self-feedback
+    
+    def process(self,  input_value,  rhythm_influence=None):        
+        # Basic processing with optional rhythm influence (bidirectional)
+        base_activation = self.activation * 0.95 + input_value * 0.3
+        
+        # Self-feedback mechanism (minimal)
+        if rhythm_influence is not None:
+            base_activation += rhythm_influence * 0.1  # Simple feedback
+            
+        self.activation = max(0.0,  min(1.5,  base_activation))
+        self.coherence = max(0.0,  min(1.0,  self.coherence + 0.01))
+        
+        # Self-influence for next cycle
+        self.feedback_influence = self.activation * 0.05
+        return self.activation
+    
+    def reset(self):        
+        self.activation = 0.0
+        self.coherence = 0.0
+        self.feedback_influence = 0.0
+
+class MicroBrain:         
+    __slots__ = ('layers',  'input_queue',  'last_feed_step',  'feed_interval',         
+                 'metrics',  '_step',  'current_rhythm_core',  'rhythm_history')
+
+    def __init__(self,  version:  str = "v4.2",  save_dir:  str = "/data/microbrain/"):         
+        self.layers = [Layer(i) for i in range(1,  4)]
+        self.input_queue = deque(maxlen=50)
+        
+        self.feed_interval = {
+            Modality.MONO_AUDIO:  80,         
+            Modality.STEREO_AUDIO:  120,         
+            Modality.VIDEO:  300,         
+            Modality.TEXT:  500
+        }
+        
+        self.last_feed_step = {m:  -self.feed_interval[m] for m in Modality}
+        
+        self.metrics = {
+            "activation_history":  deque(maxlen=200),          
+            "coherence_history":  deque(maxlen=200),          
+            "rhythmcore_variance":  deque(maxlen=50),          
+            "feed_impact":  {m:  0.0 for m in Modality}
+        }
+        self._step = 0
+        self.current_rhythm_core = 0.0
+        self.rhythm_history = deque(maxlen=100)
+        print(f"🚀 MicroBrain {version} 已支持玩家多模态喂养（1特征压缩）")
+
+    def feed_input(self,  modality:  Modality,  data) -> bool:         
+        if self._step - self.last_feed_step[modality] < self.feed_interval[modality]:         
+            return False
+
+        sensory_boost = self._extract_feature(modality,  data)
+        self.layers[0].activation = min(1.5,  self.layers[0].activation + sensory_boost * 0.6)
+        self.input_queue.append((modality,  sensory_boost,  self._step))
+        self.last_feed_step[modality] = self._step
+        self.metrics["feed_impact"][modality] += sensory_boost
+        print(f"🍎 玩家喂养 → {modality.value} | boost={sensory_boost: .3f} | Step={self._step}")
+        return True
+
+    def _extract_feature(self,  modality:  Modality,  data) -> float:         
+        if modality == Modality.MONO_AUDIO:         
+            rms = data if isinstance(data,  (int,  float)) else 0.6
+            return min(1.0,  max(0.0,  rms * 1.1))
+
+        elif modality == Modality.STEREO_AUDIO:         
+            if isinstance(data,  tuple) and len(data) == 2:         
+                balance = abs(data[0] - data[1])
+                energy = (data[0] + data[1]) / 2
+                return min(1.0,  energy * 1.15 - balance * 0.2)
+            return 0.65
+
+        elif modality == Modality.VIDEO:         
+            motion = data if isinstance(data,  (int,  float)) else 0.4
+            return min(1.0,  motion * 0.9)
+
+        elif modality == Modality.TEXT:         
+            intensity = len(str(data)) / 200.0 if isinstance(data,  str) else 0.5
+            return min(1.0,  intensity * 0.75)
+        return 0.3
+
+    def decode_rhythm_core(self,  rhythm_core):       
+        # Simple decoding - maintains bidirectional communication concept
+        return rhythm_core * 0.5 if rhythm_core != 0 else 0
+
+    def compute_rhythm_core(self):       
+        # Simple but effective: creates self-consistency through layer state
+        layer_activations = [layer.activation for layer in self.layers]
+        avg_activation = sum(layer_activations) / len(layer_activations)
+        
+        # Add some temporal stability (self-locking)
+        if self.current_rhythm_core != 0:
+            # Blend with previous state for stability (self-locking)
+            return (avg_activation + self.current_rhythm_core * 0.7) / 1.7
+        return avg_activation
+
+    def step(self,  external_input:  float = 0.0) -> float:         
+        if self.input_queue:         
+            _,  boost,  _ = self.input_queue.popleft()
+            external_input = external_input * 0.7 + boost * 0.3
+
+        # Bidirectional communication: rhythm core influences processing
+        rhythm_influence = self.decode_rhythm_core(self.current_rhythm_core)
+        
+        # Layer 0 processes with rhythm influence
+        activation = self.layers[0].process(external_input,  rhythm_influence)
+
+        # Nested processing: each layer influences the next
+        for i, layer in enumerate(self.layers[1:],  1):         
+            # Add some influence from previous layer (nested architecture)
+            combined_input = activation + self.layers[i-1].feedback_influence
+            activation = layer.process(combined_input,  rhythm_influence)
+
+        self._step += 1
+        self.metrics["activation_history"].append(activation)
+        self.metrics["coherence_history"].append(self.layers[0].coherence)
+
+        # Self-consistency check (every 1000 steps instead of 10000 for more frequent feedback)
+        if self._step % 1000 == 0:         
+            new_rhythm_core = self.compute_rhythm_core()
+            self.current_rhythm_core = new_rhythm_core
+            self.rhythm_history.append(self.current_rhythm_core)
+            self.metrics["rhythmcore_variance"].append(abs(self.current_rhythm_core))
+
+        return activation
+
+    def get_feeding_report(self) -> dict:         
+        ah = self.metrics["activation_history"]
+        ch = self.metrics["coherence_history"]
+        rv = self.metrics["rhythmcore_variance"]
+
+        avg_act = sum(ah) / len(ah) if ah else 0
+        avg_coh = sum(ch) / len(ch) if ch else 0
+        rc_stable = sum(rv) / len(rv) if rv else 0
+
+        return {
+            "平均Activation":  round(avg_act,  3),         
+            "平均Coherence":  round(avg_coh,  3),         
+            "RhythmCore稳定性":  round(200 - rc_stable,  1),        
+            "各模态贡献":  {k.value:  round(v,  3) for k,  v in self.metrics["feed_impact"].items()},         
+            "建议下一步测试":  "调整 feed_interval 并观察Coherence是否>88、Activation保持+55~+60"
+        }
+
+# Test the enhanced version
+if __name__ == "__main__":     
+    brain = MicroBrain()
+    
+    # Test feeding inputs
+    brain.feed_input(Modality.TEXT,  "Hello world")
+    brain.feed_input(Modality.MONO_AUDIO,  0.8)
+    
+    # Test multiple steps to see feedback effects
+    for i in range(10):
+        result = brain.step(0.1)
+        print(f"Step {i+1} result:  {result:.4f}")
+    
+    # Get report
+    report = brain.get_feeding_report()
+    print("Feeding report:   ",  report)

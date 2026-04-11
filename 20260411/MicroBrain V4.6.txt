@@ -1,0 +1,176 @@
+from enum import Enum
+from collections import deque
+import random
+
+class Modality(Enum):
+    MONO_AUDIO = "mono_audio"
+    STEREO_AUDIO = "stereo_audio"
+    VIDEO = "video"
+    TEXT = "text"
+
+class Layer:
+    def __init__(self, layer_id: int):
+        self.layer_id = layer_id
+        self.activation = 0.0
+        self.coherence = 0.85
+        self.feedback_influence = 0.0
+
+    def process(self, input_value: float, rhythm_influence: float = 0.0):
+        base = self.activation * 0.96 + input_value * 0.25
+        if rhythm_influence != 0:
+            base += rhythm_influence * 0.08
+        self.activation = max(0.0, min(1.8, base))
+        self.coherence = max(0.5, min(1.0, self.coherence * 0.995 + 0.02))
+        self.feedback_influence = self.activation * 0.06
+        return self.activation
+
+class MicroBrain:
+    def __init__(self, version: str = "v4.6"):
+        self.layers = [Layer(i) for i in range(1, 4)]
+        self.input_queue = deque(maxlen=50)
+        self.feed_interval = {Modality.MONO_AUDIO: 80, Modality.STEREO_AUDIO: 120,
+                              Modality.VIDEO: 300, Modality.TEXT: 500}
+        self.last_feed_step = {m: -self.feed_interval[m] for m in Modality}
+        
+        self._step = 0
+        self.current_rhythm_core: int = 0
+        self.rhythm_history = deque(maxlen=32)
+        
+        # === 新增：小本本记忆 ===
+        self.memory_notebook = {}          # key -> value（像密码本）
+        self.memory_age = {}               # 记忆“新鲜度”
+        
+        print(f"🚀 MicroBrain {version} 双向原型启动（输入+输出+小本本记忆）")
+
+    def feed_input(self, modality: Modality, data) -> bool:
+        if self._step - self.last_feed_step.get(modality, -9999) < self.feed_interval[modality]:
+            return False
+        sensory_boost = self._extract_feature(modality, data)
+        self.layers[0].activation = min(1.8, self.layers[0].activation + sensory_boost * 0.55)
+        self.input_queue.append((modality, sensory_boost, self._step))
+        self.last_feed_step[modality] = self._step
+        print(f"🍎 喂养 → {modality.value} | boost={sensory_boost:.3f}")
+        return True
+
+    def _extract_feature(self, modality: Modality, data) -> float:
+        if modality == Modality.MONO_AUDIO:
+            rms = data if isinstance(data, (int, float)) else 0.6
+            return min(1.0, max(0.0, rms * 1.1))
+        elif modality == Modality.STEREO_AUDIO:
+            if isinstance(data, tuple) and len(data) == 2:
+                balance = abs(data[0] - data[1])
+                energy = (data[0] + data[1]) / 2
+                return min(1.0, energy * 1.15 - balance * 0.2)
+            return 0.65
+        elif modality == Modality.VIDEO:
+            motion = data if isinstance(data, (int, float)) else 0.4
+            return min(1.0, motion * 0.9)
+        elif modality == Modality.TEXT:
+            intensity = len(str(data)) / 200.0 if isinstance(data, str) else 0.5
+            return min(1.0, intensity * 0.75)
+        return 0.3
+
+    def decode_rhythm_core(self, rc: int) -> float:
+        return (rc / 200.0) * 0.12
+
+    def compute_rhythm_core(self) -> int:
+        avg_act = sum(l.activation for l in self.layers) / 3.0
+        prev = self.current_rhythm_core
+        raw = avg_act * 110 + prev * 0.6
+        rc = max(-200, min(200, round(raw)))
+        return rc
+
+    def step(self, external_input: float = 0.0) -> float:
+        if self.input_queue:
+            _, boost, _ = self.input_queue.popleft()
+            external_input = external_input * 0.7 + boost * 0.3
+        rhythm_inf = self.decode_rhythm_core(self.current_rhythm_core)
+        activation = self.layers[0].process(external_input, rhythm_inf)
+        for i, layer in enumerate(self.layers[1:], 1):
+            combined = activation + self.layers[i-1].feedback_influence * 0.7
+            activation = layer.process(combined, rhythm_inf)
+        self._step += 1
+        if self._step % 5000 == 0:
+            self.current_rhythm_core = self.compute_rhythm_core()
+            self.rhythm_history.append(self.current_rhythm_core)
+        return activation
+
+    # ==================== 新增：输出接口 + 双向互动 ====================
+    def interact(self, query: str = None) -> str:
+        """玩家互动接口（双向流动）"""
+        self.step(0.1)  # 轻微思考一步
+        
+        act = self.layers[0].activation * 60
+        coh = self.layers[0].coherence * 100
+        rc = self.current_rhythm_core
+        
+        if query is None:
+            # 主动输出当前状态
+            return f"（大脑状态）Activation≈{act:.1f} | Coherence≈{coh:.1f} | RhythmCore={rc} | 我现在感觉很平稳～"
+        
+        # 玩家提问或指令
+        q_lower = query.lower()
+        
+        if "密码" in q_lower or "password" in q_lower or "记" in q_lower:
+            # 从小本本回忆
+            for key in self.memory_notebook:
+                if key in q_lower:
+                    return f"回忆到：{key} 是 {self.memory_notebook[key]}"
+            return "小本本里还没记这个呢～ 你要我记下来吗？"
+        
+        elif "记" in q_lower or "记住" in q_lower or "save" in q_lower:
+            # 记入小本本（示例：玩家说“记住密码是123456”）
+            parts = query.split("是", 1)
+            if len(parts) == 2:
+                key = parts[0].strip().replace("记住", "").replace("记", "").strip()
+                value = parts[1].strip()
+                self.remember(key, value)
+                return f"✅ 已记入小本本：{key} → {value}"
+            return "告诉我格式如：记住 微信密码是 abc123"
+        
+        else:
+            # 通用回应
+            responses = [
+                f"收到～ 当前我 Activation {act:.1f}，感觉很舒服。",
+                f"嗯嗯，我 Coherence {coh:.1f}，继续喂养我吧！",
+                f"（思考中）RhythmCore={rc}，你刚才说的是关于 {query} 的吗？"
+            ]
+            return random.choice(responses)
+
+    def remember(self, key: str, value):
+        """记入小本本"""
+        self.memory_notebook[key] = value
+        self.memory_age[key] = self._step
+        print(f"📓 小本本已记录：{key} = {value}")
+
+    def recall(self, key: str):
+        """主动回忆"""
+        if key in self.memory_notebook:
+            age = self._step - self.memory_age.get(key, 0)
+            freshness = max(0, 100 - age // 1000)  # 记忆会慢慢淡化
+            return f"回忆：{key} 是 {self.memory_notebook[key]}（新鲜度 {freshness}%）"
+        return "小本本里没有这条记忆～"
+
+# ====================== 测试示例 ======================
+if __name__ == "__main__":
+    brain = MicroBrain()
+    
+    # 喂养示例（序贯）
+    brain.feed_input(Modality.MONO_AUDIO, 0.85)
+    brain.feed_input(Modality.STEREO_AUDIO, (0.8, 0.9))
+    
+    # 双向互动测试
+    print("\n=== 大脑主动输出 ===")
+    print(brain.interact())
+    
+    print("\n=== 玩家互动 ===")
+    print(brain.interact("记住 银行密码是 123456"))
+    print(brain.interact("我的银行密码是什么？"))
+    
+    print("\n=== 直接回忆 ===")
+    print(brain.recall("银行密码"))
+    
+    for i in range(5):
+        brain.step()
+    
+    print("\n最终状态：", brain.interact())

@@ -1,0 +1,170 @@
+class Layer:
+    """单层极简实现（实际可替换为你的神经/振荡器逻辑）"""
+    def __init__(self, layer_id: int):
+        self.layer_id = layer_id
+        self.activation = 0.0
+        self.phase = 0.0
+        self.coherence = 0.9
+        self.activation_buffer = deque(maxlen=200)  # 仅保留少量历史，省内存
+
+    def process(self, input_signal: float, modulation: Optional[Dict] = None) -> float:
+        if modulation:
+            self.phase += modulation.get("phase_shift", 0)
+            self.activation = self.activation * modulation.get("intensity_gain", 1.0)
+        # 简单振荡示例（实际替换为你的韵律逻辑）
+        self.activation = 0.95 * self.activation + 0.1 * input_signal * (1 + 0.05 * self.phase)
+        self.activation_buffer.append(self.activation)
+        self.coherence = 0.98 * self.coherence + 0.02 * (0.9 if abs(self.activation) < 1.5 else 0.7)
+        return self.activation
+
+    def serialize_minimal(self) -> Dict:
+        return {
+            "phase": round(self.phase, 4),
+            "coherence": round(self.coherence, 4),
+            "activation": round(self.activation, 4)
+        }
+
+    def deserialize_minimal(self, data: Dict):
+        self.phase = data.get("phase", 0.0)
+        self.coherence = data.get("coherence", 0.9)
+        self.activation = data.get("activation", 0.0)
+
+    def get_recent_activations(self, n: int = 100) -> list:
+        return list(self.activation_buffer)[-n:]
+
+    def warmup_from_recent(self, recent_acts: list):
+        if recent_acts:
+            self.activation_buffer.extend(recent_acts[-50:])
+
+class MicroBrain:
+    def __init__(self, version: str = "v4.1", save_dir: str = "/data/microbrain/"):
+        self.version = version
+        self.layers = [Layer(1), Layer(2), Layer(3)]  # 低->高
+        self.rhythm_history: deque = deque(maxlen=32)
+        self.step: int = 0
+        self.current_rhythm_core: int = 0
+        self.save_dir = save_dir
+        self.metadata: Dict = {
+            "birth_time": time.time(),
+            "total_steps": 0,
+            "last_save_step": 0,
+        }
+        self.save_counter = 0
+        print(f"🚀 MicroBrain {version} 初始化完成（1特征压缩）")
+
+    def decode_rhythm_core(self, rc: int) -> Dict[str, float]:
+        norm = rc / 200.0
+        return {
+            "phase_shift": norm * 0.08,
+            "intensity_gain": 1.0 + norm * 0.12,
+            "harmony_damping": 0.96 + norm * 0.07,
+            "tail_bias": norm * 0.05
+        }
+
+    def compute_rhythm_core(self) -> int:
+        # 模拟高层计算（实际用你的采样集群统计）
+        # 这里用简化加权示例
+        p_norm = 0.1 * (self.layers[2].phase % 6.28 - 3.14) / 3.14
+        v_norm = (self.layers[0].activation + self.layers[1].activation) / 2.0
+        h_norm = (self.layers[0].coherence + self.layers[1].coherence + self.layers[2].coherence) / 3.0 - 1.0
+        t_norm = 0.05  # 简化趋势
+        raw = 0.35*p_norm + 0.25*v_norm + 0.25*h_norm + 0.15*t_norm
+        rc = max(-200, min(200, round(raw * 180)))
+        return rc
+
+    def step(self, input_signal: float = 0.0) -> float:
+        # 低层处理
+        mod = self.decode_rhythm_core(self.current_rhythm_core) if self.current_rhythm_core != 0 else None
+        activation = self.layers[0].process(input_signal, mod)
+
+        # 中层 & 高层简化传递（实际可加采样逻辑）
+        for layer in self.layers[1:]:
+            activation = layer.process(activation, mod)
+
+        self.step += 1
+        self.metadata["total_steps"] = self.step
+
+        # 每10000步更新RhythmCore并向下调制
+        if self.step % 10000 == 0:
+            self.current_rhythm_core = self.compute_rhythm_core()
+            self.rhythm_history.append(self.current_rhythm_core)
+            print(f"Step {self.step} | RhythmCore = {self.current_rhythm_core} | Act ≈ {activation:.3f}")
+
+        # 轻量自动保存（每6000步或可配置）
+        if self.step % 6000 == 0:
+            self.auto_save()
+
+        return activation
+
+    def save_state(self, filepath: str, incremental: bool = False):
+        state = {
+            "version": self.version,
+            "step": self.step,
+            "current_rhythm_core": int(self.current_rhythm_core),
+            "rhythm_history": list(self.rhythm_history),
+            "metadata": self.metadata,
+            "layers": [
+                {
+                    "layer_id": i+1,
+                    "activations_last_100": layer.get_recent_activations(100),
+                    "internal_state": layer.serialize_minimal()
+                }
+                for i, layer in enumerate(self.layers)
+            ]
+        }
+
+        # 使用msgpack + lz4（推荐，体积更小、速度更快）
+        packed = msgpack.packb(state, use_bin_type=True)
+        compressed = lz4.frame.compress(packed, compression_level=lz4.frame.COMPRESSIONLEVEL_MAX)
+
+        with open(filepath, "wb") as f:
+            f.write(compressed)
+
+        self.metadata["last_save_step"] = self.step
+        self.save_counter += 1
+        size_kb = len(compressed) / 1024
+        mode = "增量" if incremental else "完整"
+        print(f"✅ {mode}保存完成: {filepath} ({size_kb:.1f} KB)")
+
+    def load_state(self, filepath: str) -> bool:
+        try:
+            with open(filepath, "rb") as f:
+                compressed = f.read()
+            packed = lz4.frame.decompress(compressed)
+            state = msgpack.unpackb(packed, raw=False)
+
+            # 版本兼容
+            if state.get("version") != self.version:
+                print(f"⚠️ 版本迁移: {state.get('version')} → {self.version}")
+                # 示例迁移：旧版补零历史
+                if "rhythm_history" not in state or not state["rhythm_history"]:
+                    state["rhythm_history"] = [0] * 32
+
+            # 恢复
+            self.step = state["step"]
+            self.current_rhythm_core = state["current_rhythm_core"]
+            self.rhythm_history.clear()
+            self.rhythm_history.extend(state["rhythm_history"])
+            self.metadata = state["metadata"]
+
+            for i, layer_data in enumerate(state["layers"]):
+                self.layers[i].deserialize_minimal(layer_data["internal_state"])
+                self.layers[i].warmup_from_recent(layer_data.get("activations_last_100", []))
+
+            print(f"✅ 从第 {self.step} 步恢复成功 | RhythmCore={self.current_rhythm_core}")
+            return True
+        except Exception as e:
+            print(f"❌ 加载失败: {e}")
+            return False
+
+    def auto_save(self):
+        import os
+        os.makedirs(self.save_dir, exist_ok=True)
+        filepath = f"{self.save_dir}brain_state_{self.step}.mbak"
+        self.save_state(filepath, incremental=True)
+        # 简单清理：保留最近3个文件（实际可增强）
+        # ...
+
+# ====================== 使用示例 ======================
+if __name__ == "__main__":
+    brain = MicroBrain(save_dir="./saves/")

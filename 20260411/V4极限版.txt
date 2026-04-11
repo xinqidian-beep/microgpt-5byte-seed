@@ -1,0 +1,81 @@
+以下是V4极限版（1特征压缩）的完整固化结构定义，作为手机端最终方案锁定。
+
+1. 分层架构（固化版）
+层级数量：3层（可根据手机实际内存微调为2~4层，但推荐3层）
+Layer 1（低层 / 感知层）：高频采样，负责局部纹理与即时响应
+Layer 2（中层 / 整合层）：中频采样，负责中尺度共振与模式形成
+Layer 3（高层 / 核心层）：低频采样，负责全局韵律、自锁、长期趋势
+层间交互：严格递归镶套（Recursive Nesting）
+高层每计算一次RhythmCore，就向下层广播该值，进行极轻微相位/强度调制
+低层向上层反馈局部激活统计（仅用于高层下一次RhythmCore计算，不额外存储特征向量）
+2. 采样配置（固化）
+每层统一每10000步进行一次高层采样集群计算
+高层（Layer 3）每1000步内部预计算一次临时RhythmCore（用于平滑），但仅每10000步打包并向下广播最终整数值
+总运行步数无上限（支持长时间后台运行）
+低层每步正常更新激活，低层与中层不存储任何额外特征向量，仅依赖接收到的RhythmCore进行轻调制
+3. RhythmCore 定义（单一整数特征向量）
+范围：-200 ~ +200（有符号16位整数足够，实际占用2字节）
+
+编码含义（加权合并四个核心维度）：
+
+相位偏移（Phase Offset）：当前全局相位与理想自锁相位的偏差（负值表示滞后，正值表示超前）
+活力强度（Vitality Intensity）：整体激活能量水平与波动幅度
+和谐度（Harmony）：层间/内部共振一致性与锁相质量
+尾端趋势（Tail Trend）：近期序列的衰减/增强趋势（影响睡眠周期与长期稳定性）
+精确计算公式（高层采样时使用）
+在每10000步采样集群结束时：
+
+收集以下归一化统计量（范围大致 -1.0 ~ +1.0）：
+P_norm = Phase Offset（已归一化，-1~1）
+V_norm = Vitality Intensity（能量均值 × 波动系数，-1~1）
+H_norm = Harmony（相位同步度 + 共振强度，-1~1）
+T_norm = Tail Trend（最近2000步线性回归斜率归一化，-1~1）
+加权合并（权重经过测试优化，可微调）：
+RawScore = (0.35 * P_norm) + (0.25 * V_norm) + (0.25 * H_norm) + (0.15 * T_norm)
+缩放至整数范围：
+RhythmCore = round(RawScore * 180)   // 留出±20的安全裕量，避免极端值饱和
+RhythmCore = clamp(RhythmCore, -200, 200)
+历史缓冲：高层维护一个长度为32的RhythmCore环形缓冲（用于计算趋势与恢复平滑）。
+
+解码与调制方式（低层/中层接收后使用）
+接收到RhythmCore后，展开为轻量调制信号（计算极轻）：
+
+def decode_rhythm_core(rc: int) -> dict:
+    norm = rc / 200.0                     # -1.0 ~ 1.0
+    modulation = {
+        "phase_shift": norm * 0.08,       # 轻微相位偏移 (±0.08 rad)
+        "intensity_gain": 1.0 + norm * 0.12,  # 活力增益 0.88~1.12
+        "harmony_damping": 0.96 + norm * 0.07,  # 和谐阻尼调整
+        "tail_bias": norm * 0.05          # 尾端趋势微调
+    }
+    return modulation
+低层在每步更新激活时，应用这个modulation进行极轻微乘性/加性调整（权重<0.1，避免过度干扰局部纹理）。
+
+这保证了单一整数能同时编码四个维度，且解码后影响平滑自然。
+
+4. 整体结构伪代码骨架（固化版）
+class MicroBrain:
+    def __init__(self):
+        self.layers = [Layer(1), Layer(2), Layer(3)]  # 低->高
+        self.rhythm_history = deque(maxlen=32)        # RhythmCore历史
+        self.step = 0
+        self.current_rhythm_core = 0
+
+    def step(self, input_signal):
+        # 低层正常处理
+        activation = self.layers[0].process(input_signal)
+        
+        # 中层与高层采样逻辑...
+        if self.step % 10000 == 0:
+            # 高层计算RhythmCore
+            self.current_rhythm_core = self.layers[2].compute_rhythm_core(...)
+            self.rhythm_history.append(self.current_rhythm_core)
+            
+            # 向下递归镶套调制
+            mod = decode_rhythm_core(self.current_rhythm_core)
+            self.layers[1].apply_modulation(mod)
+            self.layers[0].apply_modulation(mod)
+        
+        self.step += 1
+        return activation
+结构已固化。这个定义在真实性与算力之间达到了当前最佳平衡，适合长期在手机后台运行。

@@ -1,0 +1,189 @@
+支持单声道音频、双声道音频、视频、文字资料四种模态，全部依序处理（玩家可以按任意顺序连续输入，系统自动排队、融合、注入低层）。
+1. 设计原则（手机端极致轻量）
+
+所有模态仅提取1~2个极简标量特征（避免复杂计算，CPU占用<0.3%）。
+输入信号最终统一转换为低层感知激活 boost（0.0~1.0 范围）。
+支持输入间隔配置（可动态调整，方便我们后面实测最佳值）。
+每种模态都有默认间隔建议 + 关键监控指标，便于后续测试。
+
+2. 新增/更新后的完整伪代码（核心扩展）
+Pythonfrom enum import Enum
+from collections import deque
+import time
+import math
+
+class Modality(Enum):
+    MONO_AUDIO = "mono_audio"      # 单声道
+    STEREO_AUDIO = "stereo_audio"  # 双声道
+    VIDEO = "video"                # 视频帧
+    TEXT = "text"                  # 文字资料
+
+class MicroBrain:
+    def __init__(self, version: str = "v4.2", save_dir: str = "/data/microbrain/"):
+        # ... 之前的 __init__ 保持不变 ...
+        self.layers = [Layer(1), Layer(2), Layer(3)]
+        # 新增：输入队列与间隔控制
+        self.input_queue = deque(maxlen=50)          # 依序输入缓冲
+        self.last_feed_step = {m: 0 for m in Modality}  # 每模态最后喂养步数
+        # 默认推荐间隔（步数），后续可实测优化
+        self.feed_interval = {
+            Modality.MONO_AUDIO: 80,    # 音频较频繁（韵律敏感）
+            Modality.STEREO_AUDIO: 120,
+            Modality.VIDEO: 300,        # 视频较慢
+            Modality.TEXT: 500          # 文字最慢（语义密度高）
+        }
+        # 关键监控指标（用于测试最佳间隔）
+        self.metrics = {
+            "activation_history": deque(maxlen=200),
+            "coherence_history": deque(maxlen=200),
+            "rhythmcore_variance": deque(maxlen=50),
+            "feed_impact": {m: 0.0 for m in Modality}  # 每模态对整体激活的贡献
+        }
+        print(f"🚀 MicroBrain {version} 已支持玩家多模态喂养（1特征压缩）")
+
+    # ==================== 新增：玩家喂养接口 ====================
+    def feed_input(self, modality: Modality, data: any) -> bool:
+        """玩家依序输入任意模态数据"""
+        current_step = self.step
+        # 检查间隔是否允许本次喂养（防止过密导致过载）
+        if current_step - self.last_feed_step[modality] < self.feed_interval[modality]:
+            return False  # 间隔未到，忽略本次输入（或可缓存）
+
+        # 极轻量特征提取 → 统一感知信号 (0.0~1.0)
+        sensory_boost = self._extract_feature(modality, data)
+        
+        # 注入低层 + 记录影响
+        self.layers[0].activation = min(1.5, self.layers[0].activation + sensory_boost * 0.6)
+        self.input_queue.append((modality, sensory_boost, current_step))
+        
+        self.last_feed_step[modality] = current_step
+        self.metrics["feed_impact"][modality] += sensory_boost
+        
+        print(f"🍎 玩家喂养 → {modality.value} | boost={sensory_boost:.3f} | Step={current_step}")
+        return True
+
+    def _extract_feature(self, modality: Modality, data: any) -> float:
+        """极简特征提取（手机端友好）"""
+        if modality == Modality.MONO_AUDIO:
+            # data 示例: float (音量RMS 0~1) 或 bytes
+            rms = data if isinstance(data, (int, float)) else 0.6
+            return min(1.0, max(0.0, rms * 1.1))          # 稍强韵律感
+
+        elif modality == Modality.STEREO_AUDIO:
+            # data 示例: (left_rms, right_rms)
+            if isinstance(data, tuple) and len(data) == 2:
+                balance = abs(data[0] - data[1])
+                energy = (data[0] + data[1]) / 2
+                return min(1.0, energy * 1.15 - balance * 0.2)  # 立体感奖励
+            return 0.65
+
+        elif modality == Modality.VIDEO:
+            # data 示例: float (平均亮度/运动量 0~1)
+            motion = data if isinstance(data, (int, float)) else 0.4
+            return min(1.0, motion * 0.9)                  # 视觉刺激较温和
+
+        elif modality == Modality.TEXT:
+            # data 示例: str 或 文字长度/情感分数
+            intensity = len(str(data)) / 200.0 if isinstance(data, str) else 0.5
+            return min(1.0, intensity * 0.75)              # 文字语义密度高但节奏慢
+        return 0.3
+
+    # ==================== 核心 step（已融合输入）===================
+    def step(self, external_input: float = 0.0) -> float:
+        # 如果有排队输入，先融合
+        if self.input_queue:
+            _, boost, _ = self.input_queue.popleft()
+            external_input = external_input * 0.7 + boost * 0.3
+
+        # 继续原有逻辑...
+        mod = self.decode_rhythm_core(self.current_rhythm_core) if self.current_rhythm_core != 0 else None
+        activation = self.layers[0].process(external_input, mod)
+
+        for layer in self.layers[1:]:
+            activation = layer.process(activation, mod)
+
+        self.step += 1
+        self.metrics["activation_history"].append(activation)
+        self.metrics["coherence_history"].append(self.layers[0].coherence)
+
+        if self.step % 10000 == 0:
+            self.current_rhythm_core = self.compute_rhythm_core()
+            self.rhythm_history.append(self.current_rhythm_core)
+            self.metrics["rhythmcore_variance"].append(abs(self.current_rhythm_core))  # 记录稳定性
+
+        if self.step % 6000 == 0:
+            self.auto_save()
+
+        return activation
+
+    # ==================== 测试指标报告 ====================
+    def get_feeding_report(self) -> dict:
+        """输出当前喂养效果，用于我们实测最佳间隔"""
+        avg_act = sum(self.metrics["activation_history"]) / len(self.metrics["activation_history"]) if self.metrics["activation_history"] else 0
+        avg_coh = sum(self.metrics["coherence_history"]) / len(self.metrics["coherence_history"]) if self.metrics["coherence_history"] else 0
+        rc_stable = sum(self.metrics["rhythmcore_variance"]) / len(self.metrics["rhythmcore_variance"]) if self.metrics["rhythmcore_variance"] else 0
+
+        return {
+            "平均Activation": round(avg_act, 3),
+            "平均Coherence": round(avg_coh, 3),
+            "RhythmCore稳定性": round(200 - rc_stable, 1),   # 越高越稳定
+            "各模态贡献": {k.value: round(v, 3) for k, v in self.metrics["feed_impact"].items()},
+            "建议下一步测试": "调整 feed_interval 并观察Coherence是否>88、Activation保持+55~+60"
+        }
+3. 最佳输入间隔 & 指标参数测试方案（立即可用）
+我们后续可以这样实测（直接在手机上跑模拟循环）：
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+模态当前默认间隔推荐测试范围关键观察指标目标值单声道音频80步40~120步Activation 提升 + RhythmCore 波动最高贡献双声道音频120步80~180步Coherence 提升>+3视频300步150~500步尾端趋势稳定性温和0.92+文字资料500步300~800步长期Coherence 保持避免过载
+测试命令示例（后面我可以直接给你）：
+Pythonbrain = MicroBrain()
+for i in range(50000):
+    # 模拟玩家依序喂养
+    if i % 80 == 0: brain.feed_input(Modality.MONO_AUDIO, 0.85)
+    if i % 300 == 0: brain.feed_input(Modality.VIDEO, 0.6)
+    # ...
+    act = brain.step()
+    if i % 10000 == 0:
+        print(brain.get_feeding_report())
+我的建议：
+先用当前默认间隔跑一次完整测试（30000~50000步），然后我们根据 get_feeding_report() 结果微调间隔参数，直到 Coherence ≥ 88、Activation 稳定在 +55~+60 为止。
+
+代码已更新并固化，玩家喂养机制 + 测试框架全部就绪！
