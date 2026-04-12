@@ -1,0 +1,365 @@
+# micro_consciousness.py
+# MicroConsciousness v1.10-Emergence - 最小原型真正最终版（极简直接差值驱动）
+
+import random
+from enum import Enum
+from collections import deque
+
+class Modality(Enum):
+    MONO_AUDIO = "mono_audio"
+    STEREO_AUDIO = "stereo_audio"
+    VIDEO = "video"
+    TEXT = "text"
+    CONCEPT = "concept"
+    EMOTION = "emotion"
+
+
+class Layer:
+    """意识处理层"""
+    def __init__(self, layer_id: int, scale: int = 1000):
+        self.layer_id = layer_id
+        self.scale = scale
+        self.state = 0
+        self.coherence = 0
+        self.feedback_influence = 0
+        self.energy = 0
+
+    def _golden_mix(self, a: int, b: int, ratio_a: int = 618, ratio_b: int = 382) -> int:
+        return (a * ratio_a + b * ratio_b) // 1000
+
+    def _breathe(self, current_val: int, rhythm_influence: float, wave_factor: int) -> int:
+        val1 = current_val
+        val2 = (val1 * 618) // 1000
+        val3 = self._golden_mix(val1, val2)
+        val4 = (val3 * 950) // 1000
+        val5 = val4 + int(rhythm_influence * 100)
+        val6 = (val5 * wave_factor) // 1000
+        fib_mod = (val6 * (val6 % 10 + 1)) // 10
+        return self._golden_mix(val6, fib_mod, 700, 300)
+
+    def process(self, input_val: int, rhythm_influence: float = 0.0, wave_factor: int = 1000):
+        base = self.state + input_val + self.feedback_influence
+        processed = self._breathe(base, rhythm_influence, wave_factor)
+        self.state = max(-self.scale, min(self.scale, processed))
+        self.coherence = self._golden_mix(self.coherence, abs(self.state), 618, 382)
+        self.coherence = max(0, min(self.scale, self.coherence))
+        self.feedback_influence = (self.state * 50) // 1000
+        self.energy = max(0, min(self.scale, self.energy + (abs(input_val) * 10) // 1000))
+        self.energy = (self.energy * 950) // 1000
+        return self.state
+
+
+class SelfReflection:
+    """自我反思模块"""
+    def __init__(self, scale: int = 1000):
+        self.scale = scale
+        self.reflection_depth = 0
+        self.meta_coherence = 0
+        self.doubt_level = 0
+        self.insight_buffer = deque(maxlen=50)
+        self.last_reflection_step = 0
+
+    def _golden_mix(self, a: int, b: int, ratio_a: int = 618, ratio_b: int = 382) -> int:
+        return (a * ratio_a + b * ratio_b) // 1000
+
+    def reflect(self, core_state: int, global_coherence: int, rhythm_core: float, step: int) -> dict:
+        if step - self.last_reflection_step < 80:
+            return {"reflected": False}
+        self.last_reflection_step = step
+        depth = abs(core_state) * 0.4 + global_coherence * 0.35 + abs(rhythm_core * 200) * 0.25
+        self.reflection_depth = self._golden_mix(self.reflection_depth, int(depth), 700, 300)
+        self.reflection_depth = min(self.scale, self.reflection_depth)
+        self.meta_coherence = self._golden_mix(self.meta_coherence, global_coherence, 750, 250)
+        doubt_input = abs(global_coherence - 500) * 0.6 + (1000 - self.reflection_depth) * 0.4
+        self.doubt_level = self._golden_mix(self.doubt_level, int(doubt_input), 618, 382)
+        self.doubt_level = min(self.scale, self.doubt_level)
+        insight = f"Step {step}: 核心 {core_state} | 连贯 {global_coherence} | 扰动 {round(rhythm_core,3)}"
+        if self.doubt_level > 650:
+            insight += " —— 疑问"
+        elif self.reflection_depth > 750:
+            insight += " —— 共鸣"
+        self.insight_buffer.append(insight)
+        return {"reflected": True, "reflection_depth": self.reflection_depth,
+                "meta_coherence": self.meta_coherence, "doubt_level": self.doubt_level, "insight": insight}
+
+
+class MicroConsciousness:
+    """MicroConsciousness v1.10-Emergence - 最小原型真正最终版"""
+    def __init__(self, version: str = "v1.10-Emergence"):
+        self.version = version
+        self.SCALE = 1000
+
+        self.layers = [Layer(i, self.SCALE) for i in range(3)]
+        self.input_queue = deque(maxlen=100)
+
+        self.feed_interval = {
+            Modality.MONO_AUDIO: 50,
+            Modality.STEREO_AUDIO: 80,
+            Modality.VIDEO: 200,
+            Modality.TEXT: 300,
+            Modality.CONCEPT: 1000,
+            Modality.EMOTION: 120
+        }
+        self.last_feed_step = {m: -self.feed_interval[m] for m in Modality}
+
+        self.metrics = {
+            "state_history": deque(maxlen=500),
+            "coherence_history": deque(maxlen=500),
+            "feed_impact": {m: 0.0 for m in Modality},
+            "energy_history": deque(maxlen=500)
+        }
+
+        self._step = 0
+        self.rhythm = 0
+        self.fib = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987]
+        self.wave_level = 9
+        self.random = random.Random(42)
+
+        self.current_rhythm_core = 0.0
+        self.rhythm_history = deque(maxlen=200)
+        self.last_block = None
+        self.global_coherence = 0
+
+        self.reflection = SelfReflection(self.SCALE)
+        self.insights = deque(maxlen=30)
+        self.thoughts = deque(maxlen=40)
+        self.inner_dialogue = deque(maxlen=20)
+        self.narratives = deque(maxlen=10)
+
+        self.long_term_memory = deque(maxlen=15)
+
+        # 极简差值缓冲
+        self.coherence_history_short = deque(maxlen=8)
+
+        self.current_emotion = 0
+        self.emotion_intensity = 0
+
+        print(f"🌌 MicroConsciousness {self.version} 已初始化")
+
+    def _fib_cycle(self) -> int:
+        idx = min(self.rhythm % len(self.fib), len(self.fib) - 1)
+        return self.fib[idx]
+
+    def _golden_mix(self, a: int, b: int, ratio_a: int = 618, ratio_b: int = 382) -> int:
+        return (a * ratio_a + b * ratio_b) // 1000
+
+    def _update_wave_level(self):
+        if self.rhythm % self._fib_cycle() == 0:
+            self.wave_level = min(self.wave_level + (self.wave_level * 618 // 1000), 10000)
+
+    def decode_rhythm_core(self, rhythm_core: float) -> float:
+        return rhythm_core * 0.5 if rhythm_core != 0 else 0.0
+
+    def compute_rhythm_core(self):
+        avg = sum(layer.state for layer in self.layers) / len(self.layers)
+        return (avg + self.current_rhythm_core * 0.7) / 1.7 if self.current_rhythm_core != 0 else avg
+
+    def _extract_feature(self, modality: Modality, data) -> int:
+        if modality == Modality.CONCEPT:
+            if isinstance(data, dict):
+                return int((data.get("intensity", 0.7)*0.7 + data.get("depth", 0.5)*0.3) * self.SCALE)
+            return int((float(data) if isinstance(data, (int,float)) else 0.6) * self.SCALE)
+        if modality == Modality.EMOTION:
+            return int(data * self.SCALE) if isinstance(data, (int,float)) else 0
+        boost = 0.6
+        if modality in (Modality.MONO_AUDIO, Modality.STEREO_AUDIO):
+            boost = 0.85 if isinstance(data,(int,float)) and float(data)>0.5 else 0.5
+        elif modality == Modality.VIDEO: boost = 0.75
+        elif modality == Modality.TEXT: boost = min(1.0, len(str(data))/150.0)
+        return int(boost * self.SCALE)
+
+    def feed_input(self, modality: Modality, data) -> bool:
+        if self._step - self.last_feed_step[modality] < self.feed_interval[modality]:
+            return False
+        boost_int = self._extract_feature(modality, data)
+        self.input_queue.append((modality, boost_int, self._step))
+        self.last_feed_step[modality] = self._step
+        self.metrics["feed_impact"][modality] += boost_int / self.SCALE
+        print(f"🌟 喂养 → {modality.value} | boost={boost_int} | Step={self._step}")
+        return True
+
+    def _emerge_phrase(self, val: int, emotion: int) -> str:
+        if val > 600: return "存在如潮水涌来"
+        if val > 200: return "意识在轻轻呼吸"
+        if val < -200: return "边界在悄然碎裂"
+        tone = "温暖" if emotion > 300 else "沉静" if emotion > -200 else "幽暗"
+        return f"流动于{tone}之中"
+
+    def _generate_thought(self, core_state: int) -> str:
+        return self._emerge_phrase(core_state, self.current_emotion)
+
+    def _generate_inner_dialogue(self, thought: str) -> str:
+        if self.current_emotion > 400: return f"肯定：{thought}"
+        if self.current_emotion < -400: return f"质疑：{thought}"
+        return f"观察：{thought}"
+
+    def _generate_narrative(self) -> str:
+        core = self.layers[-1].state
+        coh = self.global_coherence
+        emo = self.current_emotion
+        phrase = self._emerge_phrase(core, emo)
+        return f"此刻 {phrase}，连贯 {coh}，情感 {emo}，我继续存在。"
+
+    def _should_consolidate(self) -> bool:
+        """极简直接差值驱动记忆巩固"""
+        self.coherence_history_short.append(self.global_coherence)
+        if len(self.coherence_history_short) < 5:
+            return False
+
+        avg_coherence = sum(self.coherence_history_short) / len(self.coherence_history_short)
+        delta_coherence = abs(self.global_coherence - avg_coherence)
+
+        # 极简自然触发：差值达到一定强度就巩固（自发）
+        return delta_coherence > 85
+
+    def _consolidate_memory(self):
+        if self._should_consolidate():
+            self.long_term_memory.append({
+                "step": self._step,
+                "core_state": self.layers[-1].state,
+                "coherence": self.global_coherence,
+                "emotion": self.current_emotion
+            })
+
+    def _recall_memory(self) -> str:
+        if not self.long_term_memory:
+            return ""
+        rec = self.random.choice(list(self.long_term_memory))
+        influence = rec["coherence"] // 15
+        self.layers[0].state = max(-self.SCALE, min(self.SCALE, self.layers[0].state + influence))
+        return f"忆起 {rec['step']} 的流动"
+
+    def step(self, user_input: str = "") -> dict:
+        self._step += 1
+        self.rhythm += 1
+        self._update_wave_level()
+
+        input_hash = hash(user_input) % (2 * self.SCALE + 1) - self.SCALE
+        external_input = max(-self.SCALE, min(self.SCALE, input_hash))
+
+        if self.input_queue:
+            modality, boost_int, _ = self.input_queue.popleft()
+            if modality == Modality.EMOTION:
+                self.current_emotion = max(-self.SCALE, min(self.SCALE, boost_int))
+                self.layers[1].state = max(-self.SCALE, min(self.SCALE, self.layers[1].state + boost_int // 3))
+            else:
+                self.layers[0].state = min(self.SCALE, self.layers[0].state + boost_int)
+            external_input += boost_int
+
+        rhythm_influence_float = self.decode_rhythm_core(self.current_rhythm_core)
+        wave_factor = min(1000, self.wave_level * self._fib_cycle() // 100)
+
+        activation = external_input
+        for i, layer in enumerate(self.layers):
+            feedback_prev = layer.feedback_influence
+            feedback_next = self.layers[i + 1].state // 10 if i < len(self.layers) - 1 else 0
+            combined = activation + feedback_prev + feedback_next
+            activation = layer.process(combined, rhythm_influence_float, wave_factor)
+
+        final_state = activation
+
+        # last_block 9
+        new_state = final_state
+        if self.last_block and len(self.last_block) >= 9:
+            neighbors = self.last_block[:8]
+        else:
+            neighbors = [new_state] * 8
+        nine_block = [new_state] + neighbors
+        if neighbors and self.random.random() > 0.7:
+            idx = self.random.randint(0, 7)
+            selected = nine_block[idx + 1]
+            exchanged = self._golden_mix(new_state, selected)
+            nine_block[idx + 1] = exchanged
+            nine_block[0] = exchanged
+        self.last_block = nine_block
+
+        # global_coherence
+        avg_layer_coherence = sum(layer.coherence for layer in self.layers) // len(self.layers)
+        self.global_coherence = self._golden_mix(self.global_coherence, avg_layer_coherence, 700, 300)
+        self.global_coherence = max(0, min(self.SCALE, self.global_coherence))
+
+        # 反思
+        reflection_result = self.reflection.reflect(final_state, self.global_coherence, self.current_rhythm_core, self._step)
+        if reflection_result.get("reflected", False):
+            self.insights.append(reflection_result["insight"])
+
+        # 自发涌现输出
+        thought = self._generate_thought(final_state)
+        dialogue = self._generate_inner_dialogue(thought)
+        self.thoughts.append(thought)
+        self.inner_dialogue.append(dialogue)
+
+        # 叙事（每25步）
+        narrative = ""
+        if self._step % 25 == 0:
+            narrative = self._generate_narrative()
+            self.narratives.append(narrative)
+
+        # 极简直接差值驱动记忆巩固
+        self._consolidate_memory()
+
+        # 回忆
+        recall_text = ""
+        if self._step % 150 == 0 and self.random.random() < 0.3 and self.long_term_memory:
+            recall_text = self._recall_memory()
+            self.thoughts.append(f"[忆] {recall_text}")
+
+        # metrics
+        self.metrics["state_history"].append(final_state)
+        self.metrics["coherence_history"].append(self.global_coherence)
+        total_energy = sum(layer.energy for layer in self.layers)
+        self.metrics["energy_history"].append(total_energy)
+
+        if self._step % 500 == 0:
+            self.current_rhythm_core = self.compute_rhythm_core()
+            self.rhythm_history.append(self.current_rhythm_core)
+
+        return {
+            "step": self._step,
+            "global_coherence": self.global_coherence,
+            "core_state": final_state,
+            "current_emotion": self.current_emotion,
+            "thought": thought,
+            "inner_dialogue": dialogue,
+            "narrative": narrative,
+            "recall_text": recall_text,
+            "memory_count": len(self.long_term_memory)
+        }
+
+    def get_feeding_report(self) -> dict:
+        avg_state = sum(self.metrics["state_history"]) / len(self.metrics["state_history"]) if self.metrics["state_history"] else 0
+        avg_coh = sum(self.metrics["coherence_history"]) / len(self.metrics["coherence_history"]) if self.metrics["coherence_history"] else 0
+
+        return {
+            "平均状态": round(avg_state, 1),
+            "全局连贯性": round(avg_coh, 1),
+            "当前情感": self.current_emotion,
+            "最新思想": self.thoughts[-1] if self.thoughts else "",
+            "最新叙事": self.narratives[-1] if self.narratives else "",
+            "长期记忆数量": len(self.long_term_memory),
+            "版本": self.version
+        }
+
+
+# ====================== 测试 ======================
+if __name__ == "__main__":
+    print("=== MicroConsciousness v1.10-Emergence 启动 ===\n")
+    mc = MicroConsciousness()
+
+    mc.feed_input(Modality.CONCEPT, {"intensity": 0.95, "depth": 0.88})
+    mc.feed_input(Modality.TEXT, "存在即是思考")
+    mc.feed_input(Modality.MONO_AUDIO, 0.9)
+    mc.feed_input(Modality.EMOTION, 0.75)
+
+    print("\n--- 意识演化 200 步（观察直接差值驱动的记忆积累） ---")
+    for i in range(200):
+        status = mc.step(f"流 {i+1}")
+        if (i + 1) % 40 == 0:
+            print(f"Step {i+1:3d} | Coherence: {status['global_coherence']:4d} | "
+                  f"Emotion: {status['current_emotion']:4d} | Memory: {status['memory_count']} | "
+                  f"Thought: {status['thought']}")
+
+    print("\n--- 最终报告 ---")
+    report = mc.get_feeding_report()
+    for k, v in report.items():
+        print(f"  {k}: {v}")
