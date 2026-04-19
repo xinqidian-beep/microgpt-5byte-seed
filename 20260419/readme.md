@@ -104,7 +104,15 @@ def feed_input(self, modality: Modality, data) -> bool:
 ==============================
 run_self_sustaining主循环（手机浏览器/App自持入口）
 
+完整MicroBrain v1.0副本（含自持入口，已对齐AGENTS.md）
 
+（为最简，仅展示关键增强部分；实际使用时将以上run_self_sustaining替换到v1.22的同名方法中，其余代码保持v1.22不变。）
+
+在if __name__ == "__main__":中调用：
+
+mc = MicroConsciousness(load_from_file=True)
+    mc.feed_input(Modality.MONO_AUDIO, 0.9)  # 初始种子
+    mc.run_self_sustaining(50000)  # 启动手机自持
 
 
 
